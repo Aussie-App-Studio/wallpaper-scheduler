@@ -340,5 +340,21 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
+    #[test]
+    fn creates_hidden_event_window_and_handles_wake_messages() {
+        let h = create_event_window().expect("create_event_window failed");
+        assert!(!h.is_invalid());
+        POKE.store(false, Ordering::SeqCst);
+        unsafe {
+            wnd_proc(h, WM_POWERBROADCAST, WPARAM(18), LPARAM(0));
+            assert!(POKE.swap(false, Ordering::SeqCst));
+            wnd_proc(h, WM_WTSSESSION_CHANGE, WPARAM(8), LPARAM(0));
+            assert!(POKE.swap(false, Ordering::SeqCst));
+            wnd_proc(h, WM_DISPLAYCHANGE, WPARAM(0), LPARAM(0));
+            assert!(POKE.swap(false, Ordering::SeqCst));
+        }
+    }
+
     use chrono::Timelike;
 }
+

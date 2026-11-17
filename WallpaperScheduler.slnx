@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/WallpaperScheduler.Agent/WallpaperScheduler.Agent.csproj" />
+    <Project Path="src/WallpaperScheduler.App/WallpaperScheduler.App.csproj">
+      <Platform Project="x64" />
+    </Project>
+    <Project Path="src/WallpaperScheduler.Core/WallpaperScheduler.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/WallpaperScheduler.Core.Tests/WallpaperScheduler.Core.Tests.csproj" />
+  </Folder>
+</Solution>

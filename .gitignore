@@ -1,0 +1,11 @@
+bin/
+obj/
+.vs/
+*.user
+*.suo
+*.lnk
+src/WallpaperScheduler.Package/out/
+*.msix
+*.msixupload
+*.cer
+*.pfx

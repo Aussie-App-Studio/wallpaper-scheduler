@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — Wallpaper Scheduler: Time of Day</title>
+  <link rel="icon" type="image/png" href="icon.png" />
+  <style>
+    :root {
+      --bg: #f3f3f3;
+      --surface: #ffffff;
+      --border: rgba(0, 0, 0, 0.08);
+      --text: #1b1b1b;
+      --muted: #5c5c5c;
+      --accent: #0067c0;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #202020;
+        --surface: #2b2b2b;
+        --border: rgba(255, 255, 255, 0.08);
+        --text: #ffffff;
+        --muted: #b8b8b8;
+        --accent: #4cc2ff;
+      }
+    }
+    body {
+      margin: 0;
+      font-family: "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+    }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 48px 20px; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 28px;
+    }
+    h1 { margin-top: 0; font-size: 1.6rem; }
+    h2 { font-size: 1.1rem; margin-top: 24px; }
+    p, li { color: var(--muted); }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <p><a href="index.html">← Back to Wallpaper Scheduler</a></p>
+    <div class="card">
+      <h1>Privacy Policy</h1>
+      <p><strong>Wallpaper Scheduler: Time of Day</strong> (published by Aussie App Studio)</p>
+      <p>Effective date: November 17, 2026</p>
+
+      <h2>1. Data Collection</h2>
+      <p>
+        Wallpaper Scheduler: Time of Day does <strong>not</strong> collect, store externally, sell, or transmit any personal information,
+        usage analytics, crash telemetry, or device identifiers.
+      </p>
+
+      <h2>2. No Internet Access</h2>
+      <p>
+        The application declares no internet capability in its Windows app manifest (<code>Package.appxmanifest</code>).
+        All wallpaper scheduling, folder ordering, and sunrise/sunset calculations run 100% locally on your device.
+      </p>
+
+      <h2>3. Local Storage</h2>
+      <p>
+        Your schedule configuration (selected file/folder paths, times, optional city/coordinates, and app preferences) is saved
+        exclusively on your PC in <code>%LocalAppData%\WallpaperScheduler\config.json</code>.
+      </p>
+
+      <h2>4. External Links</h2>
+      <p>
+        The Settings page includes an optional link to a YouTube video. Clicking that link opens your default web browser outside the application.
+      </p>
+
+      <h2>5. Contact</h2>
+      <p>
+        Questions or feedback can be submitted via the <a href="https://github.com/Aussie-App-Studio/wallpaper-scheduler/issues">GitHub repository</a>.
+      </p>
+    </div>
+  </div>
+</body>
+</html>

@@ -6,6 +6,7 @@ obj/
 *.lnk
 src/WallpaperScheduler.Package/out/
 src/WallpaperScheduler.Agent.Rs/target/
+src/WallpaperScheduler.App.Rs/target/
 *.msix
 *.msixupload
 *.cer

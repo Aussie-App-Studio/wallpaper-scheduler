@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Wallpaper Scheduler: Time of Day</title>
+<style>
+  :root {
+    --bg: transparent;
+    --bg-fallback: #f3f3f3;
+    --nav-hover: rgba(0, 0, 0, 0.04);
+    --nav-active: rgba(0, 0, 0, 0.06);
+    --card: rgba(255, 255, 255, 0.78);
+    --card-sub: rgba(255, 255, 255, 0.55);
+    --card-hover: rgba(255, 255, 255, 0.92);
+    --border: rgba(0, 0, 0, 0.075);
+    --text: #1b1b1b;
+    --muted: #5e5e5e;
+    --ctrl-bg: rgba(255, 255, 255, 0.85);
+    --ctrl-border: rgba(0, 0, 0, 0.14);
+    --accent: #0067c0;
+    --accent-fg: #ffffff;
+    --accent-hover: #005a9e;
+    --info-bg: rgba(0, 103, 192, 0.09);
+    --warn: #d87a00;
+    --warn-bg: rgba(216, 122, 0, 0.12);
+    --danger: #c42b1c;
+    --switch-off: rgba(0, 0, 0, 0.45);
+  }
+  html[data-theme="dark"] {
+    --bg-fallback: #202020;
+    --nav-hover: rgba(255, 255, 255, 0.05);
+    --nav-active: rgba(255, 255, 255, 0.08);
+    --card: rgba(255, 255, 255, 0.055);
+    --card-sub: rgba(255, 255, 255, 0.032);
+    --card-hover: rgba(255, 255, 255, 0.085);
+    --border: rgba(255, 255, 255, 0.08);
+    --text: #ffffff;
+    --muted: #b8b8b8;
+    --ctrl-bg: rgba(255, 255, 255, 0.07);
+    --ctrl-border: rgba(255, 255, 255, 0.14);
+    --accent: #4cc2ff;
+    --accent-fg: #000000;
+    --accent-hover: #70ceff;
+    --info-bg: rgba(76, 194, 255, 0.12);
+    --warn: #ffb900;
+    --warn-bg: rgba(255, 185, 0, 0.14);
+    --switch-off: rgba(255, 255, 255, 0.52);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%; overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    font-size: 14px;
+    user-select: none;
+  }
+  .shell {
+    display: flex; height: 100%; width: 100%;
+    background: var(--bg-fallback);
+  }
+  .nav {
+    width: 240px; flex-shrink: 0;
+    display: flex; flex-direction: column; justify-content: space-between;
+    padding: 12px 8px 12px 8px;
+  }
+  .nav-group { display: flex; flex-direction: column; gap: 3px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 9px 12px; border-radius: 5px;
+    cursor: pointer; border: none; background: transparent; color: var(--text);
+    font: inherit; text-align: left; position: relative;
+  }
+  .nav-item:hover { background: var(--nav-hover); }
+  .nav-item.active { background: var(--nav-active); font-weight: 600; }
+  .nav-item.active::before {
+    content: ""; position: absolute; left: 0; top: 9px; bottom: 9px; width: 3px;
+    border-radius: 2px; background: var(--accent);
+  }
+  .glyph {
+    font-family: "Segoe Fluent Icons", "Segoe MDL2 Assets";
+    font-size: 16px; width: 18px; text-align: center; flex-shrink: 0;
+  }
+  .main {
+    flex: 1; min-width: 0; overflow-y: auto; overflow-x: hidden; padding: 14px 36px 40px 28px;
+  }
+  .page { max-width: 1000px; width: 100%; }
+  h1 { margin: 0 0 18px; font-size: 28px; font-weight: 600; letter-spacing: -0.015em; }
+  .sec-hdr { margin: 22px 0 8px 1px; font-size: 14px; font-weight: 600; }
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 6px; padding: 14px 18px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    margin-bottom: 4px;
+  }
+  .card.vertical { flex-direction: column; align-items: stretch; }
+  .card-left { display: flex; align-items: center; gap: 16px; min-width: 0; flex: 1; }
+  .card-text { min-width: 0; }
+  .card-title { font-weight: 400; font-size: 14px; }
+  .card-desc { font-size: 12px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+  .card-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  .exp-wrap {
+    border-radius: 6px; margin-bottom: 10px;
+    border-left: 3px solid transparent;
+    overflow: hidden;
+  }
+  .exp-wrap.accent { border-left-width: 3px; }
+  .exp-head {
+    background: var(--card); border: 1px solid var(--border); border-left: none;
+    border-radius: 0 6px 6px 0; padding: 13px 16px;
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    cursor: pointer;
+  }
+  .exp-head:hover { background: var(--card-hover); }
+  .exp-wrap.open .exp-head { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+  .exp-body {
+    display: none; flex-direction: column;
+  }
+  .exp-wrap.open .exp-body { display: flex; }
+  .exp-item {
+    background: var(--card-sub);
+    border: 1px solid var(--border); border-top: none; border-left: none;
+    padding: 12px 18px 12px 50px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  }
+  .exp-item:last-child { border-bottom-right-radius: 6px; }
+  .exp-item.vertical { flex-direction: column; align-items: stretch; }
+  .chev { font-size: 12px; color: var(--muted); transition: transform 0.15s; margin-left: 4px; }
+  .exp-wrap.open .chev { transform: rotate(180deg); }
+
+  button, select, input[type="text"], input[type="number"], input[type="time"] {
+    font: inherit; color: var(--text);
+    background: var(--ctrl-bg); border: 1px solid var(--ctrl-border);
+    border-radius: 5px; padding: 5px 11px; height: 32px;
+  }
+  button { cursor: pointer; font-size: 13px; white-space: nowrap; }
+  button:hover:not(:disabled) { background: var(--card-hover); }
+  button:disabled { opacity: 0.45; cursor: default; }
+  button.primary {
+    background: var(--accent); color: var(--accent-fg); border-color: transparent; font-weight: 600;
+  }
+  button.primary:hover:not(:disabled) { background: var(--accent-hover); }
+  button.icon-btn { width: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+  select { min-width: 145px; }
+  html[data-theme="dark"] select option { background: #2b2b2b; color: #fff; }
+  input[type="text"] { min-width: 150px; }
+  input[type="number"] { width: 96px; }
+  .link-btn {
+    background: none; border: none; color: var(--accent); padding: 0; height: auto;
+    font-size: 13px; cursor: pointer; text-decoration: none; align-self: flex-start;
+  }
+  .link-btn:hover { text-decoration: underline; background: none; }
+
+  .toggle {
+    display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+  }
+  .toggle input { display: none; }
+  .track {
+    width: 40px; height: 20px; border-radius: 10px;
+    border: 1px solid var(--switch-off); background: transparent;
+    position: relative; transition: 0.15s;
+  }
+  .track::after {
+    content: ""; position: absolute; width: 12px; height: 12px; border-radius: 50%;
+    background: var(--switch-off); top: 3px; left: 3px; transition: 0.15s;
+  }
+  .toggle input:checked + .track {
+    background: var(--accent); border-color: var(--accent);
+  }
+  .toggle input:checked + .track::after {
+    background: var(--accent-fg); left: 23px;
+  }
+  .toggle input:disabled + .track { opacity: 0.45; }
+
+  .infobar {
+    background: var(--info-bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 12px 16px; margin-bottom: 12px;
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .infobar.warn { background: var(--warn-bg); }
+  .thumb {
+    border-radius: 4px; object-fit: cover; background: rgba(128,128,128,0.15);
+    display: block; flex-shrink: 0;
+  }
+  .mini-row { display: flex; align-items: center; gap: 4px; }
+  .playlist {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(144px, 1fr));
+    gap: 8px; max-height: 360px; overflow-y: auto; padding: 2px;
+  }
+  .tile {
+    position: relative; width: 100%; aspect-ratio: 16/9; border-radius: 6px; overflow: hidden;
+    background: rgba(128,128,128,0.18);
+  }
+  .tile.draggable { cursor: grab; }
+  .tile.drag-over { outline: 2px solid var(--accent); }
+  .tile img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+  .badge {
+    position: absolute; top: 6px; left: 6px;
+    background: rgba(0,0,0,0.75); color: #fff; font-size: 11px;
+    border-radius: 10px; padding: 1px 7px;
+  }
+  .timeline-box { margin-top: 14px; }
+  .timeline-cap { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .timeline-wrap { position: relative; height: 28px; border-radius: 6px; overflow: hidden; display: flex; }
+  .tl-seg {
+    height: 100%; display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 12px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding: 0 4px;
+  }
+  .tl-now { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; box-shadow: 0 0 3px rgba(0,0,0,0.6); }
+  .tl-axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .path-txt {
+    max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-size: 12px; color: var(--muted);
+  }
+  .warn-icon { color: var(--warn); }
+  .prose { color: var(--text); line-height: 1.55; user-select: text; }
+  .prose-muted { color: var(--muted); line-height: 1.55; user-select: text; }
+  .city-wrap { position: relative; }
+  .city-drop {
+    position: absolute; right: 0; top: 36px; width: 280px; max-height: 220px; overflow-y: auto;
+    background: var(--bg-fallback); border: 1px solid var(--ctrl-border); border-radius: 6px;
+    z-index: 30; box-shadow: 0 8px 24px rgba(0,0,0,0.28);
+  }
+  .city-opt { padding: 7px 12px; cursor: pointer; font-size: 13px; }
+  .city-opt:hover { background: var(--nav-hover); }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.35); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="nav" aria-label="Main navigation">
+    <div class="nav-group">
+      <button class="nav-item active" data-tab="schedule"><span class="glyph">&#xE787;</span><span>Schedule</span></button>
+      <button class="nav-item" data-tab="displays"><span class="glyph">&#xE7F4;</span><span>Displays</span></button>
+      <button class="nav-item" data-tab="tips"><span class="glyph">&#xEA80;</span><span>Tips &amp; Tricks</span></button>
+    </div>
+    <div class="nav-group">
+      <button class="nav-item" data-tab="settings"><span class="glyph">&#xE713;</span><span>Settings</span></button>
+    </div>
+  </nav>
+  <main class="main"><div id="page" class="page"></div></main>
+</div>
+
+<script>
+const PALETTE = ["#FFB900", "#0078D4", "#E3008C", "#5C2E91", "#107C10", "#CA5010"];
+const INTERVALS = [
+  [1, "1 minute"], [10, "10 minutes"], [30, "30 minutes"],
+  [60, "1 hour"], [360, "6 hours"], [1440, "1 day"]
+];
+
+let S = null; // State from Rust
+let TAB = "schedule";
+let OPEN = new Set(); // expanded slot indices
+let LOC_OPEN = false;
+let STATUS = { backup: "", shortcut: "", apply: "" };
+
+function send(type, payload = {}) {
+  window.ipc.postMessage(JSON.stringify({ type, ...payload }));
+}
+
+window.__onState = (next) => {
+  S = next;
+  applyTheme();
+  render();
+};
+window.__onStatus = (key, text) => {
+  STATUS[key] = text;
+  render();
+};
+
+function applyTheme() {
+  if (!S) return;
+  const t = S.config.AppTheme;
+  const dark = t === "Dark" || (t === "System" && S.systemDark);
+  document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+  if (S.mica) document.documentElement.classList.add("mica-ok");
+}
+
+document.querySelectorAll(".nav-item").forEach(btn => {
+  btn.addEventListener("click", () => {
+    TAB = btn.dataset.tab;
+    document.querySelectorAll(".nav-item").forEach(b => b.classList.toggle("active", b === btn));
+    if (TAB === "displays") send("refreshMonitors");
+    render();
+  });
+});
+
+function esc(s) {
+  return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+function imgUrl(path) { return "/img?p=" + encodeURIComponent(path); }
+function baseName(p) { return !p ? "" : p.replace(/[\\/]+$/, "").split(/[\\/]/).pop() || p; }
+function fmtTime(hhmmss) {
+  const [h, m] = (hhmmss || "08:00:00").split(":").map(Number);
+  const ap = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m || 0).padStart(2, "0")} ${ap}`;
+}
+function everyText(m) {
+  if (m === 1) return "minute";
+  if (m === 60) return "hour";
+  if (m === 1440) return "day";
+  return m % 60 === 0 ? `${m / 60} hours` : `${m} minutes`;
+}
+function slotDesc(slot, info) {
+  if (info && info.issue) return "Warning: " + info.issue;
+  const when = slot.Start === "Time" ? fmtTime(slot.TimeOfDay)
+    : slot.Start + (slot.OffsetMinutes === 0 ? "" : slot.OffsetMinutes > 0 ? ` + ${slot.OffsetMinutes} min` : ` − ${-slot.OffsetMinutes} min`);
+  const days = slot.Days === "Weekdays" ? " · Weekdays" : slot.Days === "Weekends" ? " · Weekends" : "";
+  const what = !slot.Path ? "No picture chosen"
+    : (info && info.isFolder ? "Folder: " : "Picture: ") + baseName(slot.Path);
+  const th = slot.Theme === "Light" ? " · Light theme" : slot.Theme === "Dark" ? " · Dark theme" : "";
+  return `${when}${days} · ${what}${th}`;
+}
+
+function saveConfig() { send("saveConfig", { config: S.config }); }
+
+function detectPreset() {
+  const sl = S.config.Slots;
+  if (sl.length === 2 && sl[0].Start === "Sunrise" && sl[1].Start === "Sunset") return "Day & Night";
+  if (sl.length === 4 && sl.every(x => x.Start === "Time") &&
+      ["06:00:00","12:00:00","18:00:00","21:00:00"].every((t,i) => sl[i].TimeOfDay.startsWith(t.slice(0,5))))
+    return "Four times of day";
+  return "Custom";
+}
+
+function applyPreset(preset) {
+  const old = S.config.Slots.map(s => s.Path);
+  const mk = (name, start, tod, theme="LeaveAlone") => ({
+    Name: name, Start: start, TimeOfDay: tod, OffsetMinutes: 0, Path: "",
+    Shuffle: false, SlideshowIntervalMinutes: 30, Fit: "Fill", Theme: theme, Days: "EveryDay",
+    MonitorPaths: {}, Order: []
+  });
+  if (preset === "Day & Night") {
+    S.config.Slots = [mk("Day", "Sunrise", "08:00:00", "Light"), mk("Night", "Sunset", "18:00:00", "Dark")];
+  } else if (preset === "Four times of day") {
+    S.config.Slots = [
+      mk("Morning", "Time", "06:00:00"), mk("Afternoon", "Time", "12:00:00"),
+      mk("Evening", "Time", "18:00:00"), mk("Night", "Time", "21:00:00")
+    ];
+  } else if (S.config.Slots.length === 0) {
+    S.config.Slots = [mk("Slot 1", "Time", "08:00:00")];
+    OPEN.add(0);
+  }
+  if (preset !== "Custom") {
+    S.config.Slots.forEach((s, i) => { if (i < old.length) s.Path = old[i]; });
+  }
+  if (S.config.Slots.some(s => s.Start !== "Time") && !S.config.Location) {
+    const d = S.defaultCity;
+    S.config.Location = { Name: d.name, Latitude: d.lat, Longitude: d.lon, TimeZoneId: d.timeZoneId };
+  }
+  saveConfig();
+}
+
+function render() {
+  if (!S) return;
+  const el = document.getElementById("page");
+  if (TAB === "schedule") el.innerHTML = renderSchedule();
+  else if (TAB === "displays") el.innerHTML = renderDisplays();
+  else if (TAB === "tips") el.innerHTML = renderTips();
+  else el.innerHTML = renderSettings();
+  wireEvents();
+}
+
+function renderSchedule() {
+  const sl = S.config.Slots;
+  if (sl.length === 0) {
+    return `<h1>Schedule</h1>
+      <div class="infobar">
+        <span class="glyph" style="color:var(--accent)">&#xE946;</span>
+        <div>
+          <div style="font-weight:600">Welcome to Wallpaper Scheduler</div>
+          <div class="card-desc">Pick a starting layout below, then choose your pictures or folders. Everything runs locally on your PC — no ads, no accounts, no tracking.</div>
+        </div>
+      </div>
+      ${welcomeCard("Day & Night", "Two slots starting at sunrise and sunset. Great for light and dark folders.", "&#xE706;", "Day & Night")}
+      ${welcomeCard("Four times of day", "Morning (6 AM), Afternoon (12 PM), Evening (6 PM), and Night (9 PM).", "&#xE823;", "Four times of day")}
+      ${welcomeCard("Start from scratch", "Create your own custom time slots.", "&#xE710;", "Custom")}`;
+  }
+
+  const now = S.now;
+  let nowHdr = "Waiting for a valid slot", nowDesc = "Add a slot, or choose a location for sunrise/sunset times.", nowGlyph = "&#xE91B;";
+  if (now) {
+    if (now.issue) {
+      nowHdr = `Now showing: ${esc(now.slotName)} (skipped)`;
+      nowDesc = `${esc(now.issue)} Next change at ${esc(now.nextChangeText)}.`;
+      nowGlyph = "&#xE7BA;";
+    } else {
+      nowHdr = `Now showing: ${esc(now.slotName)}`;
+      const pNote = S.config.Paused ? " (schedule paused)"
+        : S.pausedUntilNext ? ` (paused until ${esc(now.nextChangeText)})` : "";
+      nowDesc = `Next change at ${esc(now.nextChangeText)}${pNote}`;
+    }
+  }
+
+  const nowHtml = `<div class="card">
+    <div class="card-left">
+      <span class="glyph ${now && now.issue ? "warn-icon" : ""}">${nowGlyph}</span>
+      <div class="card-text">
+        <div class="card-title">${nowHdr}</div>
+        <div class="card-desc">${nowDesc}</div>
+      </div>
+    </div>
+    <div class="card-right">
+      ${now && now.previewPath ? `<img class="thumb" width="88" height="50" decoding="async" src="${imgUrl(now.previewPath)}" alt="" />` : ""}
+      ${now && now.isFolder ? `<button id="btn-next-pic">Next picture</button>` : ""}
+      ${now && !S.config.Paused ? `<button id="btn-pause-next">${S.pausedUntilNext ? "Resume" : "Pause until next"}</button>` : ""}
+      <button id="btn-apply-now" ${!now || now.issue ? "disabled" : ""}>${esc(STATUS.apply || "Apply now")}</button>
+    </div>
+  </div>`;
+
+  let tlHtml = "";
+  if (S.timeline && S.timeline.length >= 2) {
+    const segs = S.timeline.map(seg =>
+      `<div class="tl-seg" title="${esc(seg.name)}" style="flex:${seg.len};background:${PALETTE[seg.slotIdx % PALETTE.length]};opacity:0.85">${seg.len > 90 ? esc(seg.name) : ""}</div>`
+    ).join("");
+    tlHtml = `<div class="timeline-box">
+      <div class="timeline-cap">Today</div>
+      <div class="timeline-wrap">${segs}<div class="tl-now" style="left:${(S.nowFrac * 100).toFixed(2)}%"></div></div>
+      <div class="tl-axis"><span>12 AM</span><span>12 PM</span><span>12 AM</span></div>
+    </div>`;
+  }
+
+  const preset = detectPreset();
+  const presetHtml = `<div class="card">
+    <div class="card-left"><span class="glyph">&#xE81C;</span>
+      <div class="card-text"><div class="card-title">Schedule type</div>
+      <div class="card-desc">Start from a preset, then choose your pictures or folders.</div></div>
+    </div>
+    <div class="card-right">
+      <select id="sel-preset" aria-label="Schedule type">
+        ${["Day & Night", "Four times of day", "Custom"].map(p => `<option ${p === preset ? "selected" : ""}>${p}</option>`).join("")}
+      </select>
+    </div>
+  </div>`;
+
+  const slotsHtml = sl.map((slot, i) => renderSlot(slot, i, S.slotInfos[i])).join("");
+
+  let locHtml = "";
+  if (sl.some(s => s.Start !== "Time") && S.config.Location) {
+    const loc = S.config.Location;
+    locHtml = `<div class="sec-hdr">Location</div>
+    <div class="exp-wrap ${LOC_OPEN ? "open" : ""}" id="loc-exp">
+      <div class="exp-head" id="loc-head">
+        <div class="card-left"><span class="glyph">&#xE707;</span>
+          <div class="card-text">
+            <div class="card-title">Nearest city</div>
+            <div class="card-desc">${esc(loc.Name)} (${loc.Latitude.toFixed(2)}, ${loc.Longitude.toFixed(2)}) · Calculated offline.</div>
+          </div>
+        </div>
+        <div class="card-right city-wrap" onclick="event.stopPropagation()">
+          <input type="text" id="city-search" value="${esc(loc.Name)}" placeholder="Search a city..." style="width:240px" />
+          <div class="city-drop" id="city-drop" style="display:none"></div>
+          <span class="glyph chev">&#xE70D;</span>
+        </div>
+      </div>
+      <div class="exp-body">
+        <div class="exp-item">
+          <div class="card-text"><div class="card-title">Custom coordinates</div>
+          <div class="card-desc">Enter your exact latitude and longitude if your city is not listed</div></div>
+          <div class="card-right">
+            <input type="number" id="loc-lat" step="0.01" min="-89.9" max="89.9" value="${loc.Latitude}" title="Latitude" />
+            <input type="number" id="loc-lon" step="0.01" min="-180" max="180" value="${loc.Longitude}" title="Longitude" />
+            <select id="loc-tz" style="max-width:220px">${S.timeZones.map(z => `<option ${z === (loc.TimeZoneId || S.localTz) ? "selected" : ""}>${esc(z)}</option>`).join("")}</select>
+            <button id="btn-apply-loc">Use coordinates</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  return `<h1>Schedule</h1>${nowHtml}${tlHtml}
+    <div class="sec-hdr">Wallpapers</div>${presetHtml}${slotsHtml}
+    <button id="btn-add-slot" style="margin-top:4px">Add a time slot</button>
+    ${locHtml}`;
+}
+
+function welcomeCard(title, desc, glyph, preset) {
+  return `<div class="card">
+    <div class="card-left"><span class="glyph">${glyph}</span>
+      <div class="card-text"><div class="card-title">${title}</div><div class="card-desc">${desc}</div></div>
+    </div>
+    <div class="card-right"><button class="primary btn-welcome" data-preset="${preset}">Get started</button></div>
+  </div>`;
+}
+
+function renderSlot(slot, i, info) {
+  const color = PALETTE[i % PALETTE.length];
+  const open = OPEN.has(i);
+  const icon = info.issue ? "&#xE7BA;" : slot.Start === "Sunrise" ? "&#xE706;" : slot.Start === "Sunset" ? "&#xE708;" : "&#xE823;";
+
+  let mini = `<span class="card-desc">Nothing chosen</span>`;
+  if (info.isFolder) {
+    const files = info.orderedFiles || [];
+    if (files.length === 0) mini = `<span class="card-desc">No pictures</span>`;
+    else {
+      mini = files.slice(0, 3).map(f => `<img class="thumb" width="64" height="36" decoding="async" src="${imgUrl(f)}" alt="" />`).join("")
+        + (files.length > 3 ? `<span class="card-desc">+${files.length - 3}</span>` : "");
+    }
+  } else if (info.fileExists) {
+    mini = `<img class="thumb" width="64" height="36" decoding="async" src="${imgUrl(slot.Path)}" alt="" />`;
+  }
+
+  let previewBlock = "";
+  if (info.isFolder) {
+    const files = info.orderedFiles || [];
+    const canReorder = !slot.Shuffle;
+    const cap = files.length === 0 ? "This folder has no pictures."
+      : slot.Shuffle
+        ? `${files.length} pictures · Windows shows them in random order, changing every ${everyText(slot.SlideshowIntervalMinutes)}. Turn off shuffle to choose the order.`
+        : `${files.length} pictures · shown in this order, changing every ${everyText(slot.SlideshowIntervalMinutes)}. Drag to reorder.`;
+    const tiles = files.map((f, idx) => `
+      <div class="tile ${canReorder ? "draggable" : ""}" draggable="${canReorder}" data-slot="${i}" data-file="${esc(baseName(f))}" title="${esc(baseName(f))}">
+        <img src="${imgUrl(f)}" decoding="async" alt="${esc(baseName(f))}" />
+        <span class="badge">${idx + 1}</span>
+      </div>`).join("");
+    previewBlock = `<div class="exp-item vertical">
+      <div class="card-title">Pictures</div>
+      <div class="card-desc" style="margin:6px 0 8px">${cap}</div>
+      <div class="playlist" data-slot="${i}">${tiles}</div>
+      ${canReorder && slot.Order.length > 0 ? `<button class="link-btn btn-sort-name" data-slot="${i}" style="margin-top:8px">Sort by name</button>` : ""}
+    </div>`;
+  } else if (info.fileExists) {
+    previewBlock = `<div class="exp-item">
+      <div class="card-title">Preview</div>
+      <img class="thumb" width="192" height="108" decoding="async" src="${imgUrl(slot.Path)}" alt="" />
+    </div>`;
+  }
+
+  const slideshowBlock = !info.isFolder ? "" : `<div class="exp-item">
+    <div class="card-text"><div class="card-title">Slideshow</div><div class="card-desc">Change picture every</div></div>
+    <div class="card-right">
+      <label class="toggle"><input type="checkbox" class="inp-shuffle" data-slot="${i}" ${slot.Shuffle ? "checked" : ""} /><span class="track"></span><span>${slot.Shuffle ? "Shuffle" : "In order"}</span></label>
+      <select class="sel-interval" data-slot="${i}">
+        ${INTERVALS.map(([v, lbl]) => `<option value="${v}" ${slot.SlideshowIntervalMinutes === v ? "selected" : ""}>${lbl}</option>`).join("")}
+      </select>
+    </div>
+  </div>`;
+
+  return `<div class="exp-wrap accent ${open ? "open" : ""}" style="border-left-color:${color}">
+    <div class="exp-head" data-toggle="${i}">
+      <div class="card-left">
+        <span class="glyph ${info.issue ? "warn-icon" : ""}">${icon}</span>
+        <div class="card-text">
+          <div class="card-title">${esc(slot.Name)}</div>
+          <div class="card-desc">${esc(slotDesc(slot, info))}</div>
+        </div>
+      </div>
+      <div class="card-right" onclick="event.stopPropagation()">
+        ${info.issue ? `<span class="glyph warn-icon" title="${esc(info.issue)}">&#xE7BA;</span>` : ""}
+        <div class="mini-row">${mini}</div>
+        <input type="text" class="inp-name" data-slot="${i}" value="${esc(slot.Name)}" aria-label="Slot name" />
+        <button class="icon-btn btn-del" data-slot="${i}" title="Remove this slot"><span class="glyph">&#xE74D;</span></button>
+        <span class="glyph chev" data-toggle="${i}" style="cursor:pointer">&#xE70D;</span>
+      </div>
+    </div>
+    <div class="exp-body">
+      ${info.issue ? `<div class="exp-item">
+        <div class="card-left"><span class="glyph warn-icon">&#xE7BA;</span>
+          <div class="card-text"><div class="card-title">${esc(info.issue)}</div>
+          <div class="card-desc">${info.conflict ? "Change one of the start times so they do not overlap." : "Choose a valid picture or folder below."}</div></div>
+        </div>
+      </div>` : ""}
+      <div class="exp-item">
+        <div class="card-title">Starts at</div>
+        <div class="card-right">
+          <select class="sel-start" data-slot="${i}">
+            <option value="Time" ${slot.Start==="Time"?"selected":""}>Specific time</option>
+            <option value="Sunrise" ${slot.Start==="Sunrise"?"selected":""}>Sunrise</option>
+            <option value="Sunset" ${slot.Start==="Sunset"?"selected":""}>Sunset</option>
+          </select>
+          ${slot.Start === "Time"
+            ? `<input type="time" class="inp-time" data-slot="${i}" value="${slot.TimeOfDay.slice(0,5)}" step="300" />`
+            : `<input type="number" class="inp-offset" data-slot="${i}" min="-240" max="240" step="5" value="${slot.OffsetMinutes}" title="Offset minutes" />`}
+        </div>
+      </div>
+      <div class="exp-item">
+        <div class="card-text"><div class="card-title">Days</div><div class="card-desc">Run on every day, weekdays only, or weekends only</div></div>
+        <select class="sel-days" data-slot="${i}">
+          <option value="EveryDay" ${slot.Days==="EveryDay"?"selected":""}>Every day</option>
+          <option value="Weekdays" ${slot.Days==="Weekdays"?"selected":""}>Weekdays</option>
+          <option value="Weekends" ${slot.Days==="Weekends"?"selected":""}>Weekends</option>
+        </select>
+      </div>
+      <div class="exp-item">
+        <div class="card-text"><div class="card-title">Shows</div><div class="card-desc">A single picture, or a folder to cycle through</div></div>
+        <div class="card-right">
+          <span class="path-txt" title="${esc(slot.Path)}">${esc(slot.Path || "Nothing chosen")}</span>
+          <button class="btn-pick-img" data-slot="${i}">Choose picture</button>
+          <button class="btn-pick-dir" data-slot="${i}">Choose folder</button>
+        </div>
+      </div>
+      ${previewBlock}
+      ${slideshowBlock}
+      <div class="exp-item">
+        <div class="card-title">Choose a fit for your picture</div>
+        <select class="sel-fit" data-slot="${i}">
+          ${["Fill","Fit","Stretch","Tile","Center","Span"].map(f => `<option ${slot.Fit===f?"selected":""}>${f}</option>`).join("")}
+        </select>
+      </div>
+      <div class="exp-item">
+        <div class="card-text"><div class="card-title">Windows theme</div><div class="card-desc">Optionally switch Windows Light or Dark mode when this slot starts</div></div>
+        <select class="sel-theme" data-slot="${i}">
+          <option value="LeaveAlone" ${slot.Theme==="LeaveAlone"?"selected":""}>Leave alone</option>
+          <option value="Light" ${slot.Theme==="Light"?"selected":""}>Light</option>
+          <option value="Dark" ${slot.Theme==="Dark"?"selected":""}>Dark</option>
+        </select>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderDisplays() {
+  const mons = S.monitors || [];
+  const same = S.config.SameOnAllDisplays;
+  let html = `<h1>Displays</h1>
+    <div class="card">
+      <div class="card-left"><span class="glyph">&#xE7F4;</span>
+        <div class="card-text"><div class="card-title">Use the same wallpaper on all displays</div>
+        <div class="card-desc">${mons.length > 1 ? `${mons.length} displays detected` : "Only one display detected"}</div></div>
+      </div>
+      <div class="card-right">
+        <label class="toggle"><input type="checkbox" id="chk-same-disp" ${same ? "checked" : ""} /><span class="track"></span><span>${same ? "On" : "Off"}</span></label>
+      </div>
+    </div>`;
+
+  if (!same) {
+    html += `<div class="sec-hdr">Different picture per display</div>
+      <div class="card-desc" style="margin:0 0 10px 1px">Choose a picture or folder for a display. Displays you leave empty use the slot's main picture.</div>`;
+    S.config.Slots.forEach((slot, si) => {
+      const items = mons.map((m, mi) => {
+        const cur = (slot.MonitorPaths || {})[m.id] || "";
+        return `<div class="exp-item">
+          <div class="card-text"><div class="card-title">Display ${mi + 1}</div><div class="card-desc">${m.width} × ${m.height}</div></div>
+          <div class="card-right">
+            <span class="card-desc">${cur ? esc(baseName(cur)) : "Same as slot"}</span>
+            <button class="btn-mon-img" data-slot="${si}" data-mon="${esc(m.id)}">Picture</button>
+            <button class="btn-mon-dir" data-slot="${si}" data-mon="${esc(m.id)}">Folder</button>
+            <button class="btn-mon-clr" data-slot="${si}" data-mon="${esc(m.id)}">Clear</button>
+          </div>
+        </div>`;
+      }).join("");
+      html += `<div class="exp-wrap open"><div class="exp-head"><div class="card-left"><span class="glyph">&#xE823;</span>
+        <div class="card-text"><div class="card-title">${esc(slot.Name)}</div><div class="card-desc">Overrides for this slot</div></div></div></div>
+        <div class="exp-body">${items}</div></div>`;
+    });
+  }
+  return html;
+}
+
+function renderTips() {
+  const tip = (title, desc, glyph) => `<div class="card"><div class="card-left"><span class="glyph">${glyph}</span>
+    <div class="card-text"><div class="card-title">${title}</div><div class="card-desc">${desc}</div></div></div></div>`;
+  return `<h1>Tips &amp; Tricks</h1>
+    <div class="card-desc" style="margin:-8px 0 8px 1px">A quick guide to how Wallpaper Scheduler works and how to get the most out of it.</div>
+    <div class="sec-hdr">How it works</div>
+    ${tip("Your day as a loop of slots", "Each slot has a start time (like 6:00 AM or Sunset) and stays active until the next slot begins — even past midnight.", "&#xE823;")}
+    ${tip("Single picture or folder slideshow", "Choose one picture for a steady wallpaper, or choose a folder to cycle through multiple pictures automatically. Turn off Shuffle inside a folder slot to drag pictures into your exact play order.", "&#xEB9F;")}
+    ${tip("Match Windows Light &amp; Dark mode", "Inside any slot, set Windows theme to Light or Dark to switch your taskbar and apps along with your wallpaper.", "&#xE793;")}
+    ${tip("Sunrise &amp; sunset without internet", "When a slot uses Sunrise or Sunset, choose your nearest city (or enter your coordinates). Times are calculated offline on your PC — nothing is sent anywhere.", "&#xE706;")}
+    ${tip("Runs silently with no tray icon", "Closing this window does not stop your schedule. A tiny background process wakes only when a wallpaper needs to change. Enable 'Start with Windows' in Settings so it runs after a reboot.", "&#xE7E8;")}
+    <div class="sec-hdr">Good to know</div>
+    ${tip("Waking from sleep", "If your PC was asleep when a slot was supposed to start, the right wallpaper for the current time is applied as soon as you wake or unlock it.", "&#xE708;")}
+    ${tip("Weekdays, weekends &amp; multiple monitors", "Set any slot to run Every day, Weekdays only, or Weekends only. Use the Displays page if you want different wallpapers on each monitor.", "&#xE7F4;")}
+    ${tip("Moving to a new PC", "Use Export settings in Settings to save your schedule to a JSON file, then Import settings on your new PC to restore everything in seconds.", "&#xE8C8;")}
+    ${tip("Spotting problems", "If a picture is moved, a drive is unplugged, or two slots start at the exact same time, you will see a warning icon on the slot card explaining what to fix.", "&#xE7BA;")}`;
+}
+
+function renderSettings() {
+  const cfg = S.config;
+  const st = S.startup || { enabled: false, locked: false, note: null };
+  return `<h1>Settings</h1>
+    <div class="card">
+      <div class="card-left"><span class="glyph">&#xE769;</span>
+        <div class="card-text"><div class="card-title">Pause Wallpaper Scheduler</div>
+        <div class="card-desc">Temporarily disable wallpaper and theme switching while keeping your schedule saved.</div></div>
+      </div>
+      <label class="toggle"><input type="checkbox" id="chk-pause" ${cfg.Paused ? "checked" : ""} /><span class="track"></span><span>${cfg.Paused ? "Paused" : "Running"}</span></label>
+    </div>
+    <div class="card">
+      <div class="card-left"><span class="glyph">&#xE7E8;</span>
+        <div class="card-text"><div class="card-title">Start with Windows</div>
+        <div class="card-desc">${esc(st.note || "On by default so your schedule keeps working after a restart. Use Pause above to disable the app temporarily.")}</div></div>
+      </div>
+      <label class="toggle"><input type="checkbox" id="chk-startup" ${st.enabled ? "checked" : ""} ${st.locked ? "disabled" : ""} /><span class="track"></span><span>${st.enabled ? "On" : "Off"}</span></label>
+    </div>
+    <div class="card">
+      <div class="card-left"><span class="glyph">&#xE790;</span>
+        <div class="card-text"><div class="card-title">App theme</div>
+        <div class="card-desc">Choose Light or Dark for this app only (does not change Windows).</div></div>
+      </div>
+      <select id="sel-app-theme">
+        <option value="System" ${cfg.AppTheme==="System"?"selected":""}>Use system setting</option>
+        <option value="Light" ${cfg.AppTheme==="Light"?"selected":""}>Light</option>
+        <option value="Dark" ${cfg.AppTheme==="Dark"?"selected":""}>Dark</option>
+      </select>
+    </div>
+
+    <div class="sec-hdr">Backup &amp; transfer</div>
+    <div class="card">
+      <div class="card-left"><span class="glyph">&#xE8C8;</span>
+        <div class="card-text"><div class="card-title">Import or export settings</div>
+        <div class="card-desc">Save your schedule to a JSON file to copy it to another PC.</div></div>
+      </div>
+      <div class="card-right">
+        <span class="card-desc">${esc(STATUS.backup)}</span>
+        <button id="btn-export">Export settings</button>
+        <button id="btn-import">Import settings</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-left"><span class="glyph">&#xE8A9;</span>
+        <div class="card-text"><div class="card-title">Shortcuts</div>
+        <div class="card-desc">${S.packaged ? "Available in Windows Search and Start automatically. Optionally add a Desktop icon." : "Create an optional Desktop icon or add to Start / Windows Search."}</div></div>
+      </div>
+      <div class="card-right">
+        <span class="card-desc">${esc(STATUS.shortcut)}</span>
+        <button id="btn-desk-lnk">Add to Desktop</button>
+        ${S.packaged ? "" : `<button id="btn-start-lnk">Add to Start / Search</button>`}
+      </div>
+    </div>
+
+    <div class="sec-hdr">About</div>
+    <div class="exp-wrap open">
+      <div class="exp-head"><div class="card-left"><span class="glyph">&#xE946;</span>
+        <div class="card-text"><div class="card-title">Wallpaper Scheduler: Time of Day</div><div class="card-desc">Version 1.0.0</div></div></div></div>
+      <div class="exp-body">
+        <div class="exp-item"><div class="card-text">
+          <div class="card-title">No ads. No accounts. No tracking.</div>
+          <div class="card-desc">Everything runs on this PC. The app has no internet capability and never collects, stores externally, or transmits any data.</div>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="sec-hdr">About the developer</div>
+    <div class="card vertical">
+      <div class="prose">Hey! My name is Jesse, and I built this because I wanted it for my own PC. I'm not monetizing it, so if you want to do me a favour, check out this video where a Bible Expert takes on hard questions from the guys on the Flagrant Podcast.</div>
+      <button class="link-btn" id="btn-yt" style="margin:8px 0">Watch on YouTube (youtube.com/watch?v=p58vknxGR4I)</button>
+      <div class="prose">I don't get anything... but as a Christian, I want as many people as possible to hear how reasonable and compelling faith in Jesus is — so that as many people as possible will be in paradise after the judgment at the end of this age. No stress if you aren't keen, you are welcome to just use the app. :)</div>
+      <div class="prose-muted" style="margin-top:10px">If you are already a Christian, you will probably like this extension I built. It's called "Bible Hover" and makes it so that whenever you hover your mouse over a Bible reference on the web a tiny box appears with the relevant verse(s).<br><br>I also have a ton of (totally free) Android apps, some of which are just generically useful, but which are especially designed to be useful to Christians. Search for "Aussie App Studio" or "Church Book Library" on the Android Play Store.</div>
+    </div>`;
+}
+
+function wireEvents() {
+  const on = (id, ev, fn) => { const e = document.getElementById(id); if (e) e.addEventListener(ev, fn); };
+  const all = (sel, ev, fn) => document.querySelectorAll(sel).forEach(e => e.addEventListener(ev, () => fn(e)));
+
+  all(".btn-welcome", "click", e => applyPreset(e.dataset.preset));
+  on("sel-preset", "change", e => applyPreset(e.target.value));
+  on("btn-add-slot", "click", () => {
+    S.config.Slots.push({
+      Name: `Slot ${S.config.Slots.length + 1}`, Start: "Time", TimeOfDay: "12:00:00", OffsetMinutes: 0,
+      Path: "", Shuffle: false, SlideshowIntervalMinutes: 30, Fit: "Fill", Theme: "LeaveAlone", Days: "EveryDay",
+      MonitorPaths: {}, Order: []
+    });
+    OPEN.add(S.config.Slots.length - 1);
+    saveConfig();
+  });
+
+  on("btn-apply-now", "click", () => send("applyNow"));
+  on("btn-next-pic", "click", () => send("nextPicture"));
+  on("btn-pause-next", "click", () => send("pauseUntilNext"));
+
+  document.querySelectorAll("[data-toggle]").forEach(el => {
+    el.addEventListener("click", ev => {
+      ev.stopPropagation();
+      const idx = Number(el.dataset.toggle);
+      const isOpen = !OPEN.has(idx);
+      if (isOpen) OPEN.add(idx); else OPEN.delete(idx);
+      const wrap = el.closest(".exp-wrap");
+      if (wrap) wrap.classList.toggle("open", isOpen);
+    });
+  });
+
+  all(".inp-name", "input", e => {
+    const i = Number(e.dataset.slot);
+    S.config.Slots[i].Name = e.value;
+    const titleEl = e.closest(".exp-wrap").querySelector(".card-title");
+    if (titleEl) titleEl.textContent = e.value;
+    send("saveConfigQuiet", { config: S.config });
+  });
+  all(".btn-del", "click", e => {
+    const i = Number(e.dataset.slot);
+    S.config.Slots.splice(i, 1);
+    OPEN = new Set([...OPEN].filter(x => x !== i).map(x => x > i ? x - 1 : x));
+    saveConfig();
+  });
+  all(".sel-start", "change", e => {
+    const i = Number(e.dataset.slot);
+    S.config.Slots[i].Start = e.value;
+    if (e.value !== "Time" && !S.config.Location) {
+      const d = S.defaultCity;
+      S.config.Location = { Name: d.name, Latitude: d.lat, Longitude: d.lon, TimeZoneId: d.timeZoneId };
+    }
+    saveConfig();
+  });
+  all(".inp-time", "change", e => {
+    S.config.Slots[Number(e.dataset.slot)].TimeOfDay = (e.value || "08:00") + ":00";
+    saveConfig();
+  });
+  all(".inp-offset", "change", e => {
+    const v = parseInt(e.value, 10);
+    if (!Number.isNaN(v)) { S.config.Slots[Number(e.dataset.slot)].OffsetMinutes = Math.max(-240, Math.min(240, v)); saveConfig(); }
+  });
+  all(".sel-days", "change", e => { S.config.Slots[Number(e.dataset.slot)].Days = e.value; saveConfig(); });
+  all(".btn-pick-img", "click", e => send("pickImage", { slot: Number(e.dataset.slot) }));
+  all(".btn-pick-dir", "click", e => send("pickFolder", { slot: Number(e.dataset.slot) }));
+  all(".inp-shuffle", "change", e => { S.config.Slots[Number(e.dataset.slot)].Shuffle = e.checked; saveConfig(); });
+  all(".sel-interval", "change", e => { S.config.Slots[Number(e.dataset.slot)].SlideshowIntervalMinutes = Number(e.value); saveConfig(); });
+  all(".sel-fit", "change", e => { S.config.Slots[Number(e.dataset.slot)].Fit = e.value; saveConfig(); });
+  all(".sel-theme", "change", e => { S.config.Slots[Number(e.dataset.slot)].Theme = e.value; saveConfig(); });
+  all(".btn-sort-name", "click", e => { S.config.Slots[Number(e.dataset.slot)].Order = []; saveConfig(); });
+
+  // Drag-and-drop reorder inside folder playlists
+  let dragItem = null;
+  document.querySelectorAll(".tile.draggable").forEach(tile => {
+    tile.addEventListener("dragstart", () => { dragItem = tile; });
+    tile.addEventListener("dragover", ev => { ev.preventDefault(); tile.classList.add("drag-over"); });
+    tile.addEventListener("dragleave", () => tile.classList.remove("drag-over"));
+    tile.addEventListener("drop", ev => {
+      ev.preventDefault();
+      tile.classList.remove("drag-over");
+      if (!dragItem || dragItem === tile || dragItem.dataset.slot !== tile.dataset.slot) return;
+      const grid = tile.parentElement;
+      const nodes = [...grid.children];
+      if (nodes.indexOf(dragItem) < nodes.indexOf(tile)) grid.insertBefore(dragItem, tile.nextSibling);
+      else grid.insertBefore(dragItem, tile);
+      const si = Number(tile.dataset.slot);
+      S.config.Slots[si].Order = [...grid.children].map(c => c.dataset.file);
+      [...grid.children].forEach((c, idx) => c.querySelector(".badge").textContent = String(idx + 1));
+      saveConfig();
+    });
+  });
+
+  // Location search & custom coordinates
+  on("loc-head", "click", () => {
+    LOC_OPEN = !LOC_OPEN;
+    const locExp = document.getElementById("loc-exp");
+    if (locExp) locExp.classList.toggle("open", LOC_OPEN);
+  });
+  const cs = document.getElementById("city-search");
+  const cd = document.getElementById("city-drop");
+  if (cs && cd) {
+    const showDrop = () => {
+      const q = cs.value.trim().toLowerCase();
+      const matches = S.cities.filter(c => !q || c.name.toLowerCase().includes(q));
+      cd.innerHTML = matches.map(c => `<div class="city-opt" data-name="${esc(c.name)}">${esc(c.name)}</div>`).join("");
+      cd.style.display = matches.length ? "block" : "none";
+      cd.querySelectorAll(".city-opt").forEach(opt => {
+        opt.addEventListener("mousedown", () => {
+          const city = S.cities.find(x => x.name === opt.dataset.name);
+          if (!city) return;
+          S.config.Location = { Name: city.name, Latitude: city.lat, Longitude: city.lon, TimeZoneId: city.timeZoneId };
+          LOC_OPEN = false;
+          saveConfig();
+        });
+      });
+    };
+    cs.addEventListener("focus", showDrop);
+    cs.addEventListener("input", showDrop);
+    cs.addEventListener("blur", () => setTimeout(() => { cd.style.display = "none"; }, 150));
+  }
+  on("btn-apply-loc", "click", () => {
+    const lat = parseFloat(document.getElementById("loc-lat").value);
+    const lon = parseFloat(document.getElementById("loc-lon").value);
+    const tz = document.getElementById("loc-tz").value;
+    if (Number.isNaN(lat) || Number.isNaN(lon)) return;
+    S.config.Location = { Name: `Custom (${lat.toFixed(2)}, ${lon.toFixed(2)})`, Latitude: lat, Longitude: lon, TimeZoneId: tz };
+    saveConfig();
+  });
+
+  // Displays
+  on("chk-same-disp", "change", e => { S.config.SameOnAllDisplays = e.target.checked; saveConfig(); });
+  all(".btn-mon-img", "click", e => send("pickImage", { slot: Number(e.dataset.slot), monitor: e.dataset.mon }));
+  all(".btn-mon-dir", "click", e => send("pickFolder", { slot: Number(e.dataset.slot), monitor: e.dataset.mon }));
+  all(".btn-mon-clr", "click", e => { delete S.config.Slots[Number(e.dataset.slot)].MonitorPaths[e.dataset.mon]; saveConfig(); });
+
+  // Settings
+  on("chk-pause", "change", e => { S.config.Paused = e.target.checked; if (!S.config.Paused) S.config.PausedUntilUtc = null; saveConfig(); });
+  on("chk-startup", "change", e => send("setStartup", { enabled: e.target.checked }));
+  on("sel-app-theme", "change", e => { S.config.AppTheme = e.target.value; send("setAppTheme", { mode: e.target.value }); saveConfig(); });
+  on("btn-export", "click", () => send("exportConfig"));
+  on("btn-import", "click", () => send("importConfig"));
+  on("btn-desk-lnk", "click", () => send("addShortcut", { desktop: true }));
+  on("btn-start-lnk", "click", () => send("addShortcut", { desktop: false }));
+  on("btn-yt", "click", () => send("openUrl", { url: "https://www.youtube.com/watch?v=p58vknxGR4I" }));
+}
+
+send("ready");
+</script>
+</body>
+</html>

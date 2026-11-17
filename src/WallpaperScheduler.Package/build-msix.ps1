@@ -1,13 +1,11 @@
 param(
-    [switch]$SelfSign,
-    [switch]$UseCSharpAgent,
-    [string]$Configuration = "Release"
+    [switch]$SelfSign
 )
 $ErrorActionPreference = "Stop"
 
-$env:PATH = "$env:LOCALAPPDATA\Microsoft\dotnet-sdk;$env:USERPROFILE\.cargo\bin;$env:PATH"
-$root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $sdkBin = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64"
+$env:PATH = "$env:USERPROFILE\.cargo\bin;$sdkBin;$env:PATH"
+$root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $makeappx = Join-Path $sdkBin "makeappx.exe"
 $signtool = Join-Path $sdkBin "signtool.exe"
 
@@ -19,42 +17,32 @@ if (!(Test-Path $makeappx)) { throw "makeappx.exe not found at $makeappx" }
 $stage = Join-Path $PSScriptRoot "out\stage"
 $outMsix = Join-Path $PSScriptRoot "out\WallpaperScheduler_1.0.0.0_x64.msix"
 if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
-New-Item -ItemType Directory -Force -Path $stage | Out-Null
-
-# 2. Publish App (framework-dependent on Store-provided WindowsAppRuntime 1.8)
-Write-Host "Publishing WallpaperScheduler.App ($Configuration)..."
-dotnet publish "$root\src\WallpaperScheduler.App\WallpaperScheduler.App.csproj" `
-    -c $Configuration -r win-x64 -p:Platform=x64 -p:SelfContained=true `
-    -p:WindowsAppSDKSelfContained=false `
-    -o $stage --nologo
-if ($LASTEXITCODE -ne 0) { throw "App publish failed" }
-
-# 3. Build Agent (Rust native binary by default, or C# fallback with -UseCSharpAgent)
-if ($UseCSharpAgent) {
-    Write-Host "Publishing C# WallpaperScheduler.Agent ($Configuration)..."
-    $agentStage = Join-Path $PSScriptRoot "out\agent"
-    if (Test-Path $agentStage) { Remove-Item $agentStage -Recurse -Force }
-    dotnet publish "$root\src\WallpaperScheduler.Agent\WallpaperScheduler.Agent.csproj" `
-        -c $Configuration -r win-x64 -p:SelfContained=true -p:PublishSingleFile=true `
-        -p:PublishTrimmed=true -p:TrimMode=partial `
-        -o $agentStage --nologo
-    if ($LASTEXITCODE -ne 0) { throw "Agent publish failed" }
-    Copy-Item "$agentStage\WallpaperSchedulerAgent.exe" "$stage\WallpaperSchedulerAgent.exe" -Force
-} else {
-    Write-Host "Building Rust WallpaperScheduler.Agent.Rs (release)..."
-    Push-Location "$root\src\WallpaperScheduler.Agent.Rs"
-    try {
-        cargo build --release
-        if ($LASTEXITCODE -ne 0) { throw "Rust Agent build failed" }
-    } finally {
-        Pop-Location
-    }
-    Copy-Item "$root\src\WallpaperScheduler.Agent.Rs\target\release\WallpaperSchedulerAgent.exe" "$stage\WallpaperSchedulerAgent.exe" -Force
-}
-
-# 4. Copy manifest (makeappx requires AppxManifest.xml) + assets
-Copy-Item "$PSScriptRoot\Package.appxmanifest" "$stage\AppxManifest.xml" -Force
 New-Item -ItemType Directory -Force -Path "$stage\Assets" | Out-Null
+
+# 2. Build Rust Settings UI
+Write-Host "Building WallpaperScheduler UI (release)..."
+Push-Location "$root\src\WallpaperScheduler.App.Rs"
+try {
+    cargo build --release
+    if ($LASTEXITCODE -ne 0) { throw "UI build failed" }
+} finally {
+    Pop-Location
+}
+Copy-Item "$root\src\WallpaperScheduler.App.Rs\target\release\WallpaperScheduler.exe" "$stage\WallpaperScheduler.exe" -Force
+
+# 3. Build Rust Background Agent
+Write-Host "Building WallpaperSchedulerAgent (release)..."
+Push-Location "$root\src\WallpaperScheduler.Agent.Rs"
+try {
+    cargo build --release
+    if ($LASTEXITCODE -ne 0) { throw "Agent build failed" }
+} finally {
+    Pop-Location
+}
+Copy-Item "$root\src\WallpaperScheduler.Agent.Rs\target\release\WallpaperSchedulerAgent.exe" "$stage\WallpaperSchedulerAgent.exe" -Force
+
+# 4. Copy manifest + assets
+Copy-Item "$PSScriptRoot\Package.appxmanifest" "$stage\AppxManifest.xml" -Force
 Copy-Item "$PSScriptRoot\Assets\*" "$stage\Assets\" -Recurse -Force
 
 # 5. Pack MSIX

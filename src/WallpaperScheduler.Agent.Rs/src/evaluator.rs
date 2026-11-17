@@ -184,3 +184,64 @@ pub fn slot_is_usable(slot: &Slot) -> bool {
         p.is_file() && is_image(p)
     }
 }
+
+#[allow(dead_code)]
+pub fn validate_slot(slot: &Slot) -> Option<String> {
+    if slot.path.trim().is_empty() {
+        return Some("No picture or folder chosen.".into());
+    }
+    let p = Path::new(&slot.path);
+    if let Some(std::path::Component::Prefix(pre)) = p.components().next() {
+        let root = format!("{}\\", pre.as_os_str().to_string_lossy());
+        if !Path::new(&root).exists() {
+            return Some(format!("Drive {} is not connected.", root.trim_end_matches('\\')));
+        }
+    }
+    if p.is_dir() {
+        let has_img = std::fs::read_dir(p)
+            .ok()
+            .is_some_and(|rd| rd.flatten().any(|e| e.path().is_file() && is_image(&e.path())));
+        return if has_img {
+            None
+        } else {
+            Some("This folder contains no supported pictures.".into())
+        };
+    }
+    if !p.is_file() {
+        return Some("Picture file could not be found.".into());
+    }
+    if is_image(p) {
+        None
+    } else {
+        Some("This file is not a supported image format.".into())
+    }
+}
+
+#[allow(dead_code)]
+pub fn find_time_conflicts(config: &AppConfig, date: NaiveDate) -> Vec<bool> {
+    use chrono::Timelike;
+    let tz = resolve_zone(config.location.as_ref());
+    let mut conflicts = vec![false; config.slots.len()];
+    let mut timed: Vec<(i64, usize)> = Vec::new();
+    for (i, s) in config.slots.iter().enumerate() {
+        if let Some(at) = start_on(s, date, config.location.as_ref(), &tz) {
+            let mins = at.time().num_seconds_from_midnight() as i64 / 60;
+            timed.push((mins, i));
+        }
+    }
+    for i in 0..timed.len() {
+        for j in (i + 1)..timed.len() {
+            if timed[i].0 == timed[j].0
+                && day_filters_overlap(config.slots[timed[i].1].days, config.slots[timed[j].1].days)
+            {
+                conflicts[timed[i].1] = true;
+                conflicts[timed[j].1] = true;
+            }
+        }
+    }
+    conflicts
+}
+
+fn day_filters_overlap(a: DayFilter, b: DayFilter) -> bool {
+    a == DayFilter::EveryDay || b == DayFilter::EveryDay || a == b
+}

@@ -140,6 +140,58 @@ fn to_position(fit: FitMode) -> DESKTOP_WALLPAPER_POSITION {
     }
 }
 
+#[allow(dead_code)]
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MonitorInfo {
+    pub id: String,
+    pub width: i32,
+    pub height: i32,
+    pub current_wallpaper: String,
+}
+
+#[allow(dead_code)]
+pub fn get_monitors() -> Vec<MonitorInfo> {
+    unsafe { get_monitors_com().unwrap_or_default() }
+}
+
+unsafe fn get_monitors_com() -> windows::core::Result<Vec<MonitorInfo>> {
+    let dw: IDesktopWallpaper =
+        unsafe { CoCreateInstance(&DesktopWallpaper, None, CLSCTX_ALL)? };
+    let count = unsafe { dw.GetMonitorDevicePathCount()? };
+    let mut list = Vec::new();
+    for i in 0..count {
+        let id = unsafe { dw.GetMonitorDevicePathAt(i)? };
+        let id_str = unsafe { id.to_string().unwrap_or_default() };
+        if id_str.is_empty() {
+            continue;
+        }
+        let rect = unsafe { dw.GetMonitorRECT(&HSTRING::from(&id_str))? };
+        let wp = unsafe { dw.GetWallpaper(&HSTRING::from(&id_str))? };
+        let wp_str = unsafe { wp.to_string().unwrap_or_default() };
+        unsafe {
+            CoTaskMemFree(Some(id.as_ptr() as *const _));
+            CoTaskMemFree(Some(wp.as_ptr() as *const _));
+        }
+        list.push(MonitorInfo {
+            id: id_str,
+            width: rect.right - rect.left,
+            height: rect.bottom - rect.top,
+            current_wallpaper: wp_str,
+        });
+    }
+    Ok(list)
+}
+
+#[allow(dead_code)]
+pub fn advance_slideshow() {
+    unsafe {
+        if let Ok(dw) = CoCreateInstance::<_, IDesktopWallpaper>(&DesktopWallpaper, None, CLSCTX_ALL) {
+            let _ = dw.AdvanceSlideshow(PCWSTR::null(), windows::Win32::UI::Shell::DSD_FORWARD);
+        }
+    }
+}
+
 pub fn apply_theme(mode: WindowsThemeMode) {
     if mode == WindowsThemeMode::LeaveAlone {
         return;

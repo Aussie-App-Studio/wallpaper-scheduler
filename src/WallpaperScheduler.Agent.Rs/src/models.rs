@@ -1,9 +1,9 @@
 use chrono::{DateTime, NaiveTime, Utc};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum StartKind {
     #[default]
     Time,
@@ -11,7 +11,7 @@ pub enum StartKind {
     Sunset,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum FitMode {
     #[default]
     Fill,
@@ -22,7 +22,7 @@ pub enum FitMode {
     Span,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum WindowsThemeMode {
     #[default]
     LeaveAlone,
@@ -30,7 +30,15 @@ pub enum WindowsThemeMode {
     Dark,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum AppThemeMode {
+    #[default]
+    System,
+    Light,
+    Dark,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum DayFilter {
     #[default]
     EveryDay,
@@ -38,7 +46,7 @@ pub enum DayFilter {
     Weekends,
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase", default)]
 pub struct Slot {
     pub name: String,
@@ -55,6 +63,25 @@ pub struct Slot {
     pub order: Vec<String>,
 }
 
+impl Default for Slot {
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            start: StartKind::Time,
+            time_of_day: "08:00:00".into(),
+            offset_minutes: 0,
+            path: String::new(),
+            shuffle: false,
+            slideshow_interval_minutes: 30,
+            fit: FitMode::Fill,
+            theme: WindowsThemeMode::LeaveAlone,
+            days: DayFilter::EveryDay,
+            monitor_paths: HashMap::new(),
+            order: Vec::new(),
+        }
+    }
+}
+
 impl Slot {
     pub fn is_folder(&self) -> bool {
         !self.path.is_empty() && Path::new(&self.path).is_dir()
@@ -66,7 +93,7 @@ impl Slot {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "PascalCase", default)]
 pub struct GeoLocation {
     pub name: String,
@@ -75,15 +102,30 @@ pub struct GeoLocation {
     pub time_zone_id: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase", default)]
 pub struct AppConfig {
     pub version: i32,
     pub paused: bool,
+    pub app_theme: AppThemeMode,
     pub paused_until_utc: Option<String>,
     pub same_on_all_displays: bool,
     pub location: Option<GeoLocation>,
     pub slots: Vec<Slot>,
+}
+
+impl Default for AppConfig {
+    fn default() -> Self {
+        Self {
+            version: 1,
+            paused: false,
+            app_theme: AppThemeMode::System,
+            paused_until_utc: None,
+            same_on_all_displays: true,
+            location: None,
+            slots: Vec::new(),
+        }
+    }
 }
 
 impl AppConfig {
@@ -130,4 +172,16 @@ pub fn load_config(path: &Path) -> AppConfig {
 pub fn parse_dotnet_timespan(s: &str) -> Option<NaiveTime> {
     let main = s.split('.').next()?;
     NaiveTime::parse_from_str(main, "%H:%M:%S").ok()
+}
+
+#[allow(dead_code)]
+pub fn save_config(config: &AppConfig, path: &Path) -> std::io::Result<()> {
+    if let Some(dir) = path.parent() {
+        std::fs::create_dir_all(dir)?;
+    }
+    let tmp = path.with_extension("json.tmp");
+    let json = serde_json::to_string_pretty(config).map_err(std::io::Error::other)?;
+    std::fs::write(&tmp, json)?;
+    std::fs::rename(&tmp, path)?;
+    Ok(())
 }

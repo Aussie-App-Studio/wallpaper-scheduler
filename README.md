@@ -1,12 +1,12 @@
 # Wallpaper Scheduler: Time of Day
 
-A tiny (~0.6 MB), native Rust + WebView2 Windows 11 utility that automatically switches your desktop wallpapers — and optionally your Windows Light/Dark theme — by time of day or sunrise and sunset.
+A tiny (~0.6 MB), native Windows 11 utility that automatically switches your desktop wallpapers — and optionally your Windows Light/Dark theme — by time of day or sunrise and sunset.
 
-**Free. Open source. No ads, no accounts, no tracking, no internet access.**
+**Free. Source-available for transparency. No ads, no accounts, no tracking, no internet access.**
 
-## Install (For Users)
+## Install
 
-Install directly from the **Microsoft Store** — nothing else to download or configure:
+Install directly from the **Microsoft Store** — no extra downloads or developer tools required:
 - **Microsoft Store:** [apps.microsoft.com/detail/9N6PCZ8Z74LN](https://apps.microsoft.com/detail/9N6PCZ8Z74LN)
 - **Landing & Privacy Page:** [aussie-app-studio.github.io/wallpaper-scheduler](https://aussie-app-studio.github.io/wallpaper-scheduler/)
 
@@ -25,7 +25,7 @@ Install directly from the **Microsoft Store** — nothing else to download or co
 
 ---
 
-## Privacy
+## Privacy & Transparency
 
 Wallpaper Scheduler: Time of Day declares **no internet capability** in [`Package.appxmanifest`](src/WallpaperScheduler.Package/Package.appxmanifest). Everything runs locally on your PC, and settings are stored in `%LocalAppData%\WallpaperScheduler\config.json`.
 
@@ -33,28 +33,8 @@ See [docs/privacy.html](docs/privacy.html) for the full privacy statement.
 
 ---
 
-## For Developers: Building from Source
+## License
 
-*(End users do not need any of these tools — they are only required if you want to modify and recompile the source code.)*
+Copyright (c) 2026 Aussie App Studio. **All rights reserved.** See [LICENSE](LICENSE).
 
-### Prerequisites
-- Windows 10 (with Edge WebView2 Runtime) or Windows 11
-- [Rust toolchain](https://rustup.rs/) (`stable-x86_64-pc-windows-msvc` + MSVC Build Tools)
-- Windows 11 SDK (`10.0.26100.0` for `rc.exe` and `makeappx.exe`)
-
-### Run Tests
-```powershell
-cargo test --manifest-path src/WallpaperScheduler.Agent.Rs/Cargo.toml
-cargo test --manifest-path src/WallpaperScheduler.App.Rs/Cargo.toml
-```
-
-### Build MSIX Package
-```powershell
-# Self-signed for local sideload testing
-.\src\WallpaperScheduler.Package\build-msix.ps1 -SelfSign
-
-# Unsigned Store-ready MSIX
-.\src\WallpaperScheduler.Package\build-msix.ps1
-```
-
-*(The original C# WinUI 3 prototype is preserved in git history under tag `v1.0-winui3`.)*
+This repository is **source-available** so anyone can inspect the code for privacy and security, while prohibiting copying, modification, redistribution, or derivative works by others.

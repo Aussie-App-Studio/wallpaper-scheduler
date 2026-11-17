@@ -4,6 +4,8 @@ A tiny (~0.6 MB), native Windows 11 utility that automatically switches your des
 
 **Free. Open source (GPLv3). No ads, no accounts, no tracking, no internet access.**
 
+![Wallpaper Scheduler Hero Banner](docs/images/Hero-16x9-1920x1080.png)
+
 ## Download
 
 - **Microsoft Store (recommended):** [apps.microsoft.com/detail/9N6PCZ8Z74LN](https://apps.microsoft.com/detail/9N6PCZ8Z74LN)
@@ -22,6 +24,14 @@ A tiny (~0.6 MB), native Windows 11 utility that automatically switches your des
 - **Offline solar calculation:** Sunrise and sunset are calculated locally on your PC using the NOAA solar algorithm (choose a nearby city or enter custom coordinates).
 - **Backup & transfer:** Export your schedule to a JSON file and import it on any new PC in seconds.
 - **Ultra-lightweight:** Native Rust UI + Rust background agent (~0.6 MB download, ~1.3 MB installed, ~2.5 MB RAM & 0% CPU while sleeping until the next transition).
+
+---
+
+## Screenshots
+
+| Schedule | Tips &amp; Tricks |
+| :---: | :---: |
+| ![Schedule view](docs/images/Screenshot-Schedule.png) | ![Tips and Tricks view](docs/images/Screenshot-Tips.png) |
 
 ---
 

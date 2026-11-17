@@ -18,7 +18,7 @@ A lightweight, native Windows 11 utility that automatically switches your deskto
 - **Multi-monitor support:** Use the same wallpaper everywhere or customize each display.
 - **Offline solar calculation:** Sunrise and sunset are calculated locally on your PC using the NOAA solar algorithm (choose a nearby city or enter custom coordinates).
 - **Backup & transfer:** Export your schedule to a JSON file and import it on any new PC in seconds.
-- **Lightweight background agent:** Runs silently with no tray clutter (~11 MB RAM, 0% CPU while sleeping until the next transition) and re-evaluates automatically on wake, unlock, or display changes.
+- **Lightweight background agent:** Built in native Rust — runs silently with no tray clutter (~2.5 MB private RAM, 0% CPU while sleeping until the next transition) and re-evaluates automatically on wake, unlock, or display changes.
 
 ---
 
@@ -35,11 +35,13 @@ See [docs/privacy.html](docs/privacy.html) for the full privacy statement.
 ### Prerequisites
 - Windows 10 (19041+) or Windows 11
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
+- [Rust toolchain](https://rustup.rs/) (`stable-x86_64-pc-windows-msvc` + MSVC Build Tools)
 - Windows 11 SDK (`10.0.26100.0` for `makeappx.exe`)
 
 ### Run Tests
 ```powershell
 dotnet test tests/WallpaperScheduler.Core.Tests
+cargo test --manifest-path src/WallpaperScheduler.Agent.Rs/Cargo.toml
 ```
 
 ### Build MSIX Package

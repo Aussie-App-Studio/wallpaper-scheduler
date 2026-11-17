@@ -4,6 +4,9 @@ A tiny (~0.6 MB), native Rust + WebView2 Windows 11 utility that automatically s
 
 **Free. Open source. No ads, no accounts, no tracking, no internet access.**
 
+## Install (For Users)
+
+Install directly from the **Microsoft Store** — nothing else to download or configure:
 - **Microsoft Store:** [apps.microsoft.com/detail/9N6PCZ8Z74LN](https://apps.microsoft.com/detail/9N6PCZ8Z74LN)
 - **Landing & Privacy Page:** [aussie-app-studio.github.io/wallpaper-scheduler](https://aussie-app-studio.github.io/wallpaper-scheduler/)
 
@@ -30,7 +33,9 @@ See [docs/privacy.html](docs/privacy.html) for the full privacy statement.
 
 ---
 
-## Building from Source
+## For Developers: Building from Source
+
+*(End users do not need any of these tools — they are only required if you want to modify and recompile the source code.)*
 
 ### Prerequisites
 - Windows 10 (with Edge WebView2 Runtime) or Windows 11
